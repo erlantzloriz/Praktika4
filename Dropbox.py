@@ -154,7 +154,31 @@ class Dropbox:
         # RELLENAR CON CODIGO DE LA PETICION HTTP
         # Y PROCESAMIENTO DE LA RESPUESTA HTTP
         #############################################
+        cabeceras = {'Host': 'api.dropboxapi.com',
+                     'Authorization': 'Bearer ' + self._access_token,
+                     'Content-Type': 'application/json'}
 
+        if isinstance(file_path, (set, list, tuple)):
+            file_path = list(file_path)[0]
+
+        file_path = str(file_path).strip()
+        if not file_path.startswith("/"):
+            file_path = "/" + file_path
+
+        datos = {'path': file_path}
+        datos_json = json.dumps(datos)
+
+        respuesta = requests.post(uri, headers=cabeceras, data=datos_json)
+        print("\tStatus: " + str(respuesta.status_code))
+        if respuesta.status_code == 200:
+            resultado = json.loads(respuesta.content)
+            print("Archivo eliminado exitosamente:")
+            print(resultado)
+        else:
+            print("Error al eliminar el archivo:")
+            print(respuesta.text)
+
+    # Falta hacer hacia atras
     def create_folder(self, path):
         print("/create_folder")
         uri = 'https://api.dropboxapi.com/2/files/create_folder_v2'
