@@ -104,7 +104,7 @@ def create_folder():
     label = tk.Label(login_frame, text="Create folder")
     label.pack(side=tk.TOP)
     entry_field = tk.Entry(login_frame, width=35)
-    entry_field.bind("<Return>", name_folder)
+    entry_field.bind("<Return>", lambda event: name_folder(entry_field.get()))
     entry_field.pack(side=tk.TOP)
     send_button = tk.Button(login_frame, text="Send", command=lambda: name_folder(entry_field.get()))
     send_button.pack(side=tk.TOP)

@@ -111,9 +111,12 @@ class Dropbox:
         print("\tContenido:")
         contenido_json = json.loads(contenido)
         print("Ficheros en "+ self._path)
-        for entrie in contenido_json["entries"]:
+        for entrie in contenido_json.get("entries", []):
             print(entrie['name'])
 
+        if 'entries' not in contenido_json:
+            print("\tError: unexpected response - no 'entries' key:", contenido_json)
+            return
         self._files = helper.update_listbox2(msg_listbox, self._path, contenido_json)
 
     def transfer_file(self, file_path, file_data):
@@ -161,14 +164,13 @@ class Dropbox:
         # Y PROCESAMIENTO DE LA RESPUESTA HTTP
         #############################################
         datos = {'path': path,
-                 'autorename': 'false'}
+                 'autorename': False}
         datos_encoded = json.dumps(datos)
         print("Datuak: " + datos_encoded)
 
-        cabeceras = {'Host': 'content.dropboxapi.com',
+        cabeceras = {'Host': 'api.dropboxapi.com',
             'Authorization': 'Bearer ' + self._access_token,
-            'Content-Type': 'application/json',
-            'scope': 'files.content.write'}
+            'Content-Type': 'application/json'}
         respuesta = requests.post(uri, headers=cabeceras, data=datos_encoded)
         print("\tStatus: " + str(respuesta.status_code))
         if respuesta.status_code == 200:
