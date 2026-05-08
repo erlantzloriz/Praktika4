@@ -301,11 +301,37 @@ class eGela:
         return self._refs
 
     def get_pdf(self, selection):
-
-        print("\t##### descargando  PDF... #####")
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
-
-        #return pdf_name, pdf_content
+        print("\t##### descargando PDF... #####")
+        
+        ref = self._refs[selection]
+        pdf_name = ref['pdf_name']
+        pdf_link = ref['pdf_link']
+        
+        if not pdf_name.lower().endswith('.pdf'):
+            pdf_name += '.pdf'
+        
+        metodo = 'GET'
+        goiburuak = {"Host": "egela.ehu.eus", "Cookie": self._cookie}
+        
+        # 1. Sartu baliabidearen orrialdera (mod/resource/view.php)
+        erantzuna = requests.request(metodo, pdf_link, headers=goiburuak, allow_redirects=False)
+        html = BeautifulSoup(erantzuna.text, "html.parser")
+        
+        # 2. Bilatu "resourceworkaround" div-a benetako estekarekin
+        dok = html.find('div', {"class": "resourceworkaround"})
+        url_zuzena = None
+        if dok:
+            esteka = dok.find('a')
+            if esteka:
+                url_zuzena = esteka.get('href')
+        
+        # 3. Deskargatu PDF-a
+        if url_zuzena:
+            erantzun_pdf = requests.request(metodo, url_zuzena, headers=goiburuak, allow_redirects=True)
+        else:
+            erantzun_pdf = requests.request(metodo, pdf_link, headers=goiburuak, allow_redirects=True)
+        
+        pdf_content = erantzun_pdf.content
+        print(f"\tDeskargatuta: {pdf_name} ({len(pdf_content)} bytes)")
+        
+        return pdf_name, pdf_content

@@ -5,8 +5,8 @@ from socket import AF_INET, socket, SOCK_STREAM
 import json
 import helper
 
-app_key = ''
-app_secret = ''
+app_key = '02ekcvjs11hvdf6'
+app_secret = 'wzb3u2y7lp3x67i'
 server_addr = "localhost"
 server_port = 8090
 redirect_uri = "http://" + server_addr + ":" + str(server_port)
@@ -58,9 +58,6 @@ class Dropbox:
         # Y PROCESAMIENTO DE LAS RESPUESTAS HTTP
         # PARA LA OBTENCION DEL ACCESS TOKEN
         #############################################
-
-        app_key = 'npr0e2xchd7lbo3'
-        app_secret = '97yqlszddw9edu7'
         if len(app_key) == 0 or len(app_secret) == 0:
             print(f"falta el app_key o el app_secret en el archivo Dropbox.py\n app_secret:'{app_secret}'\n app_key'{app_key}'")
             exit(1)
@@ -172,7 +169,7 @@ class Dropbox:
             'Authorization': 'Bearer ' + self._access_token,
             'Content-Type': 'application/json',
             'scope': 'files.content.write'}
-        respuesta = requests.post(uri, headers=cabeceras, data=datos)
+        respuesta = requests.post(uri, headers=cabeceras, data=datos_encoded)
         print("\tStatus: " + str(respuesta.status_code))
         if respuesta.status_code == 200:
             resultado = json.loads(respuesta.content)
