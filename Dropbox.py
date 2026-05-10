@@ -5,10 +5,10 @@ from socket import AF_INET, socket, SOCK_STREAM
 import json
 import helper
 
-app_key = '02ekcvjs11hvdf6'
-app_secret = 'wzb3u2y7lp3x67i'
+app_key = '8tj9infsdwcxsbb'
+app_secret = 'tgnzcye443b6lbc'
 server_addr = "localhost"
-server_port = 8090
+server_port = 8070
 redirect_uri = "http://" + server_addr + ":" + str(server_port)
 
 class Dropbox:
@@ -97,7 +97,8 @@ class Dropbox:
         # RELLENAR CON CODIGO DE LA PETICION HTTP
         # Y PROCESAMIENTO DE LA RESPUESTA HTTP
         #############################################
-        datos = {'path': self._path}
+        datos = {'path': self._path,
+                 'recursive': False}
         datos_encoded = json.dumps(datos)
         print("Datuak: " + datos_encoded)
         cabeceras = {'Host': 'api.dropboxapi.com',
@@ -204,3 +205,101 @@ class Dropbox:
         else:
             print("Error al crear la carpeta:")
             print(respuesta.text)
+
+    ######################
+    # Funciones añadiras #
+    ######################
+    def rename_file(self, old_path, new_name):
+        print("/rename_file")
+        uri = 'https://api.dropboxapi.com/2/files/move_v2'
+
+        path_zatitu = old_path.split('/')
+        path_zatitu[-1] = new_name
+        new_path = '/'.join(path_zatitu)
+
+        cabeceras = {'Host': 'api.dropboxapi.com',
+                     'Authorization': 'Bearer ' + self._access_token,
+                     'Content-Type': 'application/json'}
+
+        data = {
+            'from_path': old_path,
+            'to_path': new_path,
+            'autorename': True
+        }
+        data_encoded = json.dumps(data)
+
+        erantzuna = requests.post(uri, headers=cabeceras, data=data_encoded)
+        print("\tStatus: " + str(erantzuna.status_code))
+        if erantzuna.status_code == 200:
+            return True
+        else:
+            print(erantzuna.text)
+            return False
+
+
+    def move_file(self, old_path, target_folder):
+        print("/move_v2 (Mover)")
+        uri = 'https://api.dropboxapi.com/2/files/move_v2'
+
+        # Extraemos el nombre del archivo del path original
+        file_name = old_path.split('/')[-1]
+
+        # Construimos el nuevo path (asegurándonos de que no haya dobles slashes)
+        target_folder = target_folder.strip('/')
+        if target_folder == "":
+            new_path = "/" + file_name
+        else:
+            new_path = "/" + target_folder + "/" + file_name
+
+        headers = {'Host': 'api.dropboxapi.com',
+                     'Authorization': 'Bearer ' + self._access_token,
+                     'Content-Type': 'application/json'
+                   }
+        data = {
+            "from_path": old_path,
+            "to_path": new_path,
+            "autorename": True
+        }
+
+        response = requests.post(uri, headers=headers, data=json.dumps(data))
+        return response.status_code == 200
+
+    def search(self, query, msg_listbox):
+        print("/search")
+        uri = 'https://api.dropboxapi.com/2/files/search_v2'
+
+        headers = {'Host': 'api.dropboxapi.com',
+                     'Authorization': 'Bearer ' + self._access_token,
+                     'Content-Type': 'application/json'
+        }
+        data = {'query': query,
+                'options': {
+                    'path': ""
+                }
+            }
+
+        data_encoded = json.dumps(data)
+        erantzuna = requests.post(uri, headers=headers, data=data_encoded)
+
+        if erantzuna.status_code == 200:
+            results = erantzuna.json()
+
+            # Procesamos los resultados para que tengan el formato que espera helper.update_listbox2
+            # La API de search devuelve una estructura distinta a list_folder
+            matches = results.get('matches', [])
+            processed_files = []
+
+            for m in matches:
+                # Extraemos la metadata del archivo encontrado
+                metadata = m.get('metadata', {}).get('metadata', {})
+                processed_files.append(metadata)
+
+            # Creamos un diccionario falso para engañar al helper y que pinte los resultados
+            fake_json = {'entries': processed_files}
+
+            # Limpiamos la ruta actual para indicar que estamos en modo búsqueda
+            self._path = "Resultados de búsqueda"
+            self._files = helper.update_listbox2(msg_listbox, self._path, fake_json)
+        else:
+            print("Error en la búsqueda:", erantzuna.text)
+

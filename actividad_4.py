@@ -1,6 +1,8 @@
 # -*- coding: UTF-8 -*-
 import tkinter as tk
 import os
+from tkinter import simpledialog, messagebox
+
 import eGela
 import Dropbox
 import helper
@@ -110,6 +112,83 @@ def create_folder():
     send_button.pack(side=tk.TOP)
     dropbox._root = popup
 
+######################
+# Funciones añadidas #
+######################
+def rename_file():
+    global selected_items2
+    if selected_items2:
+        index = selected_items2[0]
+        file_info = dropbox._files[index]
+
+        if file_info['name'] == "..":
+            messagebox.showwarning("Aviso", "No se puede renombrar el directorio superior (..)")
+            return
+
+        if dropbox._path == "":
+            old_path = "/" + file_info['name']
+        else:
+            old_path = dropbox._path + "/" + file_info['name']
+
+        if not old_path:
+            messagebox.showerror("Error", "El archivo no tiene ruta válida")
+            return
+
+        old_name = file_info['name']
+
+        # 4. Pedir el nuevo nombre
+        new_name = simpledialog.askstring("Rename", f"Nuevo nombre para {old_name}:")
+
+        if new_name:
+            # Llamar a la función de Dropbox.py que creaste antes
+            success = dropbox.rename_file(old_path, new_name)
+            if success:
+                dropbox.list_folder(msg_listbox2)
+                messagebox.showinfo("Éxito", "Nombre cambiado correctamente")
+            else:
+                messagebox.showerror("Error", "No se pudo renombrar el archivo")
+    else:
+        messagebox.showwarning("Selección vacía", "Por favor, selecciona un archivo de Dropbox")
+
+def move_selected():
+    global selected_items2
+    if selected_items2:
+        index = selected_items2[0]
+        file_info = dropbox._files[index]
+
+        # Evitar mover el botón de retroceso
+        if file_info['name'] == "..":
+            messagebox.showwarning("Aviso", "No puedes mover el directorio superior")
+            return
+
+        if dropbox._path == "":
+            old_path = "/" + file_info['name']
+        else:
+            old_path = dropbox._path + "/" + file_info['name']
+        # Pedir la carpeta de destino (ejemplo: /Fotos o Carpeta2)
+        target = simpledialog.askstring("Mover",
+                                        f"Mover '{file_info['name']}' a:\n(Deja vacío para la raíz o escribe el nombre de la carpeta)")
+        if target is not None:  # Si no canceló el diálogo
+            if dropbox.move_file(old_path, target):
+                dropbox.list_folder(msg_listbox2)
+                messagebox.showinfo("Éxito", "Elemento movido correctamente")
+            else:
+                messagebox.showerror("Error", "No se pudo mover. Revisa si la carpeta de destino existe.")
+    else:
+        messagebox.showwarning("Selección vacía", "Selecciona algo en Dropbox para mover")
+
+def execute_search():
+    query = search_entry.get()
+    if query:
+        # Llamamos a un nuevo método en Dropbox.py que crearemos ahora
+        dropbox.search(query, msg_listbox2)
+    else:
+        messagebox.showwarning("Atención", "Escribe algo para buscar")
+
+def clear_search():
+    search_entry.delete(0, tk.END)
+    # Volvemos a listar la carpeta donde estábamos
+    dropbox.list_folder(msg_listbox2)
 
 ##########################################################################################################
 
@@ -129,20 +208,52 @@ def on_selecting2(event):
     print (selected_items2)
 
 def on_double_clicking2(event):
+    # widget = event.widget
+    # selection = widget.curselection()
+    # if selection[0] == 0 and dropbox._path != "/":
+    #     head, tail = os.path.split(dropbox._path)
+    #     dropbox._path = head
+    # else:
+    #     selected_file = dropbox._files[selection[0]]
+    #     if selected_file['.tag'] == 'folder':
+    #         if dropbox._path == "/":
+    #             dropbox._path = dropbox._path + selected_file['name']
+    #         else:
+    #             dropbox._path = dropbox._path + '/' + selected_file['name']
+    # var.set(dropbox._path)
+    # dropbox.list_folder(msg_listbox2)
+
     widget = event.widget
     selection = widget.curselection()
-    if selection[0] == 0 and dropbox._path != "/":
-        head, tail = os.path.split(dropbox._path)
-        dropbox._path = head
-    else:
-        selected_file = dropbox._files[selection[0]]
-        if selected_file['.tag'] == 'folder':
-            if dropbox._path == "/":
-                dropbox._path = dropbox._path + selected_file['name']
+    if selection:
+        index = selection[0]
+        # Obtenemos el archivo/carpeta de la lista que guarda Dropbox
+        item = dropbox._files[index]
+
+        if item['.tag'] == 'folder':
+            if item['name'] == '..':
+
+                if dropbox._path in ["", "/"]:
+                    dropbox._path = ""
+
+                else:
+                    dropbox._path = os.path.dirname(dropbox._path)
+
+                    if dropbox._path == "/":
+                        dropbox._path = ""
+
+            # Avanzar
             else:
-                dropbox._path = dropbox._path + '/' + selected_file['name']
-    var.set(dropbox._path)
-    dropbox.list_folder(msg_listbox2)
+
+                if dropbox._path == "":
+                    dropbox._path = "/" + item['name']
+
+                else:
+                    dropbox._path = dropbox._path + "/" + item['name']
+
+            var.set(dropbox._path)
+            dropbox.list_folder(msg_listbox2)
+
 ##########################################################################################################
 # Login eGela
 root = tk.Tk()
@@ -250,7 +361,29 @@ button2 = tk.Button(frame2, borderwidth=4,  background="#C6185C",fg="white", tex
 button2.pack(padx=2, pady=2)
 button3 = tk.Button(frame2, borderwidth=4, background="#7C86FF",fg="white", text="Create folder", width=10, pady=8, command=create_folder)
 button3.pack(padx=2, pady=2)
+button4 = tk.Button(frame2, borderwidth=4, background="#FFB37C", fg="white", text="Rename", width=10, pady=8, command=rename_file)
+button4.pack(padx=2, pady=2)
+button5 = tk.Button(frame2, borderwidth=4, background="#4CAF50", fg="white", text="Move", width=10, pady=8, command=move_selected)
+button5.pack(padx=2, pady=2)
 frame2.grid(row=1, column=3,  ipadx=10, ipady=10)
+
+# search_frame = tk.Frame(newroot)
+# search_frame.grid(row=0, column=2, sticky="ew", padx=10, pady=5)
+#
+# label_search = tk.Label(search_frame, text="Buscar en Dropbox:")
+# label_search.pack(side=tk.LEFT)
+#
+# # Cuadro de entrada para el texto de búsqueda
+# search_entry = tk.Entry(search_frame, width=30)
+# search_entry.pack(side=tk.LEFT, padx=5)
+#
+# # Botón para ejecutar la búsqueda
+# button_search = tk.Button(search_frame, text="🔍", command=lambda: execute_search())
+# button_search.pack(side=tk.LEFT)
+#
+# # Botón para limpiar búsqueda y volver a ver la carpeta actual
+# button_clear = tk.Button(search_frame, text="✖", command=lambda: clear_search())
+# button_clear.pack(side=tk.LEFT, padx=2)
 
 for each in pdfs:
     msg_listbox1.insert(tk.END, each['pdf_name'])
