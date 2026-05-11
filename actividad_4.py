@@ -188,6 +188,8 @@ def execute_search():
 def clear_search():
     search_entry.delete(0, tk.END)
     # Volvemos a listar la carpeta donde estábamos
+    dropbox._path = ""
+
     dropbox.list_folder(msg_listbox2)
 
 ##########################################################################################################
@@ -323,10 +325,59 @@ label2 = tk.Label(newroot, textvariable=var2)
 label2.grid(column=0, row=0, ipadx=5, ipady=5)
 
 # Etigueta del directorio de Dropbox (0,2)
+# Frame superior Dropbox (path + buscador)
+top_frame = tk.Frame(newroot)
+top_frame.grid(row=0, column=2, sticky="ew", padx=5, pady=5)
+
+# El path ocupa más espacio
+top_frame.columnconfigure(0, weight=3)
+
+# Mostrar path actual
 var = tk.StringVar()
-var.set(dropbox._path)
-label = tk.Label(newroot, textvariable=var)
-label.grid( row=0, column=2, ipadx=5, ipady=5)
+var.set(dropbox._path if dropbox._path else "/")
+
+label = tk.Label(
+    top_frame,
+    textvariable=var,
+    anchor="w"
+)
+
+label.grid(row=0, column=0, sticky="w", padx=5)
+
+# ---------------- BUSCADOR ----------------
+
+search_frame = tk.Frame(top_frame)
+search_frame.grid(row=0, column=1, sticky="e")
+
+label_search = tk.Label(
+    search_frame,
+    text="Buscar:"
+)
+
+label_search.pack(side=tk.LEFT)
+
+search_entry = tk.Entry(
+    search_frame,
+    width=20
+)
+
+search_entry.pack(side=tk.LEFT, padx=5)
+
+button_search = tk.Button(
+    search_frame,
+    text="🔍",
+    command=lambda: execute_search()
+)
+
+button_search.pack(side=tk.LEFT)
+
+button_clear = tk.Button(
+    search_frame,
+    text="✖",
+    command=lambda: clear_search()
+)
+
+button_clear.pack(side=tk.LEFT, padx=2)
 
 # Frame con lista de PDFs e eGela (1,0)
 selected_items1 = None
@@ -366,24 +417,6 @@ button4.pack(padx=2, pady=2)
 button5 = tk.Button(frame2, borderwidth=4, background="#4CAF50", fg="white", text="Move", width=10, pady=8, command=move_selected)
 button5.pack(padx=2, pady=2)
 frame2.grid(row=1, column=3,  ipadx=10, ipady=10)
-
-# search_frame = tk.Frame(newroot)
-# search_frame.grid(row=0, column=2, sticky="ew", padx=10, pady=5)
-#
-# label_search = tk.Label(search_frame, text="Buscar en Dropbox:")
-# label_search.pack(side=tk.LEFT)
-#
-# # Cuadro de entrada para el texto de búsqueda
-# search_entry = tk.Entry(search_frame, width=30)
-# search_entry.pack(side=tk.LEFT, padx=5)
-#
-# # Botón para ejecutar la búsqueda
-# button_search = tk.Button(search_frame, text="🔍", command=lambda: execute_search())
-# button_search.pack(side=tk.LEFT)
-#
-# # Botón para limpiar búsqueda y volver a ver la carpeta actual
-# button_clear = tk.Button(search_frame, text="✖", command=lambda: clear_search())
-# button_clear.pack(side=tk.LEFT, padx=2)
 
 for each in pdfs:
     msg_listbox1.insert(tk.END, each['pdf_name'])

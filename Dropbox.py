@@ -111,6 +111,16 @@ class Dropbox:
         contenido = respuesta.text
         print("\tContenido:")
         contenido_json = json.loads(contenido)
+        if respuesta.status_code != 200:
+            print("Error Dropbox")
+            return
+
+        try:
+            contenido_json = respuesta.json()
+        except Exception as e:
+            print("JSON inválido:", e)
+            return
+
         print("Ficheros en "+ self._path)
         for entrie in contenido_json.get("entries", []):
             print(entrie['name'])
