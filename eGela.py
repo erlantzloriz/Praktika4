@@ -54,11 +54,15 @@ class eGela:
 
         erantzuna = requests.request(metodo, uri, headers=goiburua, allow_redirects=False)
 
-        # if erantzuna.status_code == 200:
-        if 'Set-Cookie' in erantzuna.headers:
-            self._cookie = erantzuna.headers['Set-Cookie'].split(";")[0]
-        if 'Location' in erantzuna.headers:
-            uri = erantzuna.headers['Location']
+        if erantzuna.status_code == 200:
+            if 'Set-Cookie' in erantzuna.headers:
+                self._cookie = erantzuna.headers['Set-Cookie'].split(";")[0]
+            if 'Location' in erantzuna.headers:
+                uri = erantzuna.headers['Location']
+        else:
+            print(f"Errorea 1 eskaeran. Emaitza: {erantzuna.status_code} {erantzuna.reason}")
+            print("Espero zena: 200")
+            exit(1)
 
         html_parser = BeautifulSoup(erantzuna.content, "html.parser")
         logintoken = html_parser.find("input", {"name": "logintoken"})["value"]
@@ -84,10 +88,15 @@ class eGela:
         goiburua["Content-Length"] = str(len(edukia_form))
 
         erantzuna2 = requests.request(metodo, uri, headers=goiburua, data=edukia_form, allow_redirects=False)
-        if 'Set-Cookie' in erantzuna2.headers:
-            self._cookie = erantzuna2.headers['Set-Cookie'].split(";")[0]
-        if 'Location' in erantzuna2.headers:
-            uri = erantzuna2.headers['Location']
+        if erantzuna2.status_code == 303:
+            if 'Set-Cookie' in erantzuna2.headers:
+                self._cookie = erantzuna2.headers['Set-Cookie'].split(";")[0]
+            if 'Location' in erantzuna2.headers:
+                uri = erantzuna2.headers['Location']
+        else:
+            print(f"Errorea 2. eskaeran. Emaitza: {erantzuna2.status_code} {erantzuna2.reason}")
+            print("Espero zena: 303")
+            exit(1)
         ################################################################
 
         progress = 50
@@ -102,10 +111,15 @@ class eGela:
 
         erantzuna3 = requests.request(metodo, uri, headers=goiburuak, allow_redirects=False)
 
-        if 'Set-Cookie' in erantzuna3.headers:
-            self._cookie = erantzuna3.headers['Set-Cookie'].split(";")[0]
-        if 'Location' in erantzuna3.headers:
-            uri = erantzuna3.headers['Location']
+        if erantzuna3.status_code == 303:
+            if 'Set-Cookie' in erantzuna3.headers:
+                self._cookie = erantzuna3.headers['Set-Cookie'].split(";")[0]
+            if 'Location' in erantzuna3.headers:
+                uri = erantzuna3.headers['Location']
+        else:
+            print(f"Errorea 3. eskaeran. Emaitza: {erantzuna3.status_code} {erantzuna3.reason}")
+            print("Espero zena: 303")
+            exit(1)
 
         if goiburuak["Cookie"] != self._cookie:
             goiburuak["Cookie"] = self._cookie
@@ -123,25 +137,31 @@ class eGela:
         #profil_url = "https://egela.ehu.eus/user/profile.php"
         #erantzun_profil = requests.request(metodo, profil_url, headers=goiburuak, allow_redirects=False)
 
+
+
         if erantzuna4.status_code == 200:
             COMPROBACION_DE_LOG_IN = True
-        # Esto creo que hay que mover abajo
-            html_parser = BeautifulSoup(erantzuna4.text, "html.parser")
-            websis = html_parser.find_all('div', {"class": "card dashboard-card"})
-
-            for w in websis:
-                # <a> esteka bilatzen dugu
-                esteka_probisional = w.find('a')
-                if esteka_probisional:
-                    izena = esteka_probisional.get_text(strip=True)
-                    # Lortutako estekan Web Sistemak dagoela egiaztatu
-                    if "Web Sistemak" in izena:
-                        self._curso = esteka_probisional['href']
-                        print(f"Irakasgaia aurkituta")
-                        print(f"Uria: {self._curso}")
-                        break
         else:
             COMPROBACION_DE_LOG_IN = False
+            print(f"Errorea 4. eskaeran. Emaitza: {erantzuna4.status_code} {erantzuna4.reason}")
+            print("Espero zena: 200")
+            exit(1)
+        # Esto creo que hay que mover abajo
+        html_parser = BeautifulSoup(erantzuna4.text, "html.parser")
+        websis = html_parser.find_all('div', {"class": "card dashboard-card"})
+
+        for w in websis:
+            # <a> esteka bilatzen dugu
+            esteka_probisional = w.find('a')
+            if esteka_probisional:
+                izena = esteka_probisional.get_text(strip=True)
+                # Lortutako estekan Web Sistemak dagoela egiaztatu
+                if "Web Sistemak" in izena:
+                    self._curso = esteka_probisional['href']
+                    print(f"Irakasgaia aurkituta")
+                    print(f"Uria: {self._curso}")
+                    break
+
         ################################################################
 
         progress = 100
@@ -165,7 +185,7 @@ class eGela:
         progress_var.set(progress)
         progress_bar.update()
 
-        print("\n##### 4. PETICION (Página principal de la asignatura en eGela) #####")
+        print("\n##### 5. PETICION (Página principal de la asignatura en eGela) #####")
         #############################################
         # RELLENAR CON CODIGO DE LA PETICION HTTP
         # Y PROCESAMIENTO DE LA RESPUESTA HTTP
@@ -194,7 +214,13 @@ class eGela:
             # =================================================================
             # .pdf fitxategiak bilaketa
             # =================================================================
+            total = len(erlaitz) + 1
+            progress_step =  100.0 / total
             for er in erlaitz:
+                progress += progress_step
+                progress_var.set(progress)
+                progress_bar.update()
+
                 uri_erlaitz = er.get('href')
 
                 if not uri_erlaitz or not uri_erlaitz.startswith('http'):
