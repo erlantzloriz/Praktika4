@@ -53,14 +53,12 @@ class Dropbox:
         return auth_code
 
     def do_oauth(self):
-        #############################################
-        # RELLENAR CON CODIGO DE LAS PETICIONES HTTP
-        # Y PROCESAMIENTO DE LAS RESPUESTAS HTTP
-        # PARA LA OBTENCION DEL ACCESS TOKEN
-        #############################################
         if len(app_key) == 0 or len(app_secret) == 0:
+            # Si no se han añadido las claves necesarias para hacer la autenticación el programa terminará
             print(f"falta el app_key o el app_secret en el archivo Dropbox.py\n app_secret:'{app_secret}'\n app_key'{app_key}'")
             exit(1)
+
+        # Definición de los campos necesarios    
         servidor = 'www.dropbox.com'
         params = {'response_type': 'code',
             'client_id': app_key,
@@ -70,8 +68,10 @@ class Dropbox:
         uri = 'https://' + servidor + recurso
         webbrowser.open_new(uri)
 
+        # Conseguir el código
         auth_code = self.local_server()
 
+        # Definición de los campos necesarios    
         params = {'code': auth_code,
         'grant_type': 'authorization_code',
         'client_id': app_key,
@@ -80,10 +80,14 @@ class Dropbox:
         cabeceras={'User-Agent':'Python Client',
         'Content-Type': 'application/x-www-form-urlencoded'}
         uri='https://api.dropboxapi.com/oauth2/token'
+
+        # Enviar petición
         respuesta = requests.post( uri, headers=cabeceras,data=params)
         print (respuesta.status_code)
+        # Procesar la respuesta como JSON
         json_respuesta = json.loads(respuesta.content)
         print (json_respuesta)
+        # Guardar access token en la variable
         self._access_token = json_respuesta['access_token']
         print ("\n\nAccess_Token:"+ self._access_token)
 
@@ -91,53 +95,53 @@ class Dropbox:
 
     def list_folder(self, msg_listbox):
         print("/list_folder")
+        # Definición de los campos necesarios para la petición HTTP
         uri = 'https://api.dropboxapi.com/2/files/list_folder'
         # https://www.dropbox.com/developers/documentation/http/documentation#files-list_folder
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
+
         datos = {'path': self._path,
                  'recursive': False}
         datos_encoded = json.dumps(datos)
-        print("Datuak: " + datos_encoded)
+        print("Datos: " + datos_encoded)
         cabeceras = {'Host': 'api.dropboxapi.com',
             'Authorization': 'Bearer ' + self._access_token,
             'Content-Type': 'application/json',
             'scope': 'files.metadata.read'}
+        
+        # Enviar petición
         respuesta = requests.post(uri, headers=cabeceras, data=datos_encoded,allow_redirects=False)
         status = respuesta.status_code
         print ("\tStatus: " + str(status))
         contenido = respuesta.text
         print("\tContenido:")
+        # Procesar la respuesta como JSON
         contenido_json = json.loads(contenido)
         if respuesta.status_code != 200:
             print("Error Dropbox")
             return
-
         try:
             contenido_json = respuesta.json()
         except Exception as e:
             print("JSON inválido:", e)
             return
 
+        # Imprimir los nombres de los archivos obtenidos
         print("Ficheros en "+ self._path)
         for entrie in contenido_json.get("entries", []):
             print(entrie['name'])
 
+        # Comprobar si hay archivos en la respuesta
         if 'entries' not in contenido_json:
-            print("\tError: unexpected response - no 'entries' key:", contenido_json)
+            print("\tNo se han encontrado archivos en:", contenido_json)
             return
         self._files = helper.update_listbox2(msg_listbox, self._path, contenido_json)
 
     def transfer_file(self, file_path, file_data):
         print("/upload")
+        # Definición de los campos necesarios para la petición HTTP
         uri = 'https://content.dropboxapi.com/2/files/upload'
         # https://www.dropbox.com/developers/documentation/http/documentation#files-upload
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
+
         uri = 'https://content.dropboxapi.com/2/files/upload'
         api_arg = "{\"autorename\":false,\"mode\":\"add\",\"mute\":false,\"path\":\"" + file_path +"\",\"strict_conflict\":false}"
         cabeceras = {'Host': 'content.dropboxapi.com',
@@ -146,8 +150,10 @@ class Dropbox:
             'scope': 'files.content.write',
             "Dropbox-API-Arg":  api_arg}
         
+        # Enviar petición
         respuesta = requests.post(uri, headers=cabeceras, data=file_data)
         print("\tStatus: " + str(respuesta.status_code))
+        # Comprobacion del status_code de la respuesta
         if respuesta.status_code == 200:
             resultado = json.loads(respuesta.content)
             print("Archivo subido exitosamente:")
@@ -159,28 +165,31 @@ class Dropbox:
 
     def delete_file(self, file_path):
         print("/delete_file")
+
+        # Definición de los campos necesarios
         uri = 'https://api.dropboxapi.com/2/files/delete_v2'
         # https://www.dropbox.com/developers/documentation/http/documentation#files-delete
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
         cabeceras = {'Host': 'api.dropboxapi.com',
                      'Authorization': 'Bearer ' + self._access_token,
                      'Content-Type': 'application/json'}
 
+        # Se comprueba si el file_path es un set, list o tuple y se extrae el primer elemento
         if isinstance(file_path, (set, list, tuple)):
             file_path = list(file_path)[0]
 
+        # Se limpian los espacios en blanco del file_path
         file_path = str(file_path).strip()
+        # Se asegura que el file_path empiece con "/"
         if not file_path.startswith("/"):
             file_path = "/" + file_path
 
         datos = {'path': file_path}
         datos_json = json.dumps(datos)
 
+        # Enviar petición
         respuesta = requests.post(uri, headers=cabeceras, data=datos_json)
         print("\tStatus: " + str(respuesta.status_code))
+        # Comprobacion del status_code de la respuesta
         if respuesta.status_code == 200:
             resultado = json.loads(respuesta.content)
             print("Archivo eliminado exitosamente:")
@@ -189,15 +198,11 @@ class Dropbox:
             print("Error al eliminar el archivo:")
             print(respuesta.text)
 
-    # Falta hacer hacia atras
     def create_folder(self, path):
         print("/create_folder")
+        # Definición de los campos necesarios para la petición HTTP
         uri = 'https://api.dropboxapi.com/2/files/create_folder_v2'
        # https://www.dropbox.com/developers/documentation/http/documentation#files-create_folder
-        #############################################
-        # RELLENAR CON CODIGO DE LA PETICION HTTP
-        # Y PROCESAMIENTO DE LA RESPUESTA HTTP
-        #############################################
         datos = {'path': path,
                  'autorename': False}
         datos_encoded = json.dumps(datos)
@@ -206,8 +211,11 @@ class Dropbox:
         cabeceras = {'Host': 'api.dropboxapi.com',
             'Authorization': 'Bearer ' + self._access_token,
             'Content-Type': 'application/json'}
+
+        # Enviar petición
         respuesta = requests.post(uri, headers=cabeceras, data=datos_encoded)
         print("\tStatus: " + str(respuesta.status_code))
+        # Comprobacion del status_code de la respuesta
         if respuesta.status_code == 200:
             resultado = json.loads(respuesta.content)
             print("Carpeta creada exitosamente:")
@@ -217,12 +225,14 @@ class Dropbox:
             print(respuesta.text)
 
     ######################
-    # Funciones añadiras #
+    # Funciones añadidas #
     ######################
     def rename_file(self, old_path, new_name):
         print("/rename_file")
+       
+        # Definición de los campos necesarios para la petición HTTP
         uri = 'https://api.dropboxapi.com/2/files/move_v2'
-
+        # Se define un nuevo path con el mismo directorio pero con el nuevo nombre
         path_zatitu = old_path.split('/')
         path_zatitu[-1] = new_name
         new_path = '/'.join(path_zatitu)
@@ -238,23 +248,30 @@ class Dropbox:
         }
         data_encoded = json.dumps(data)
 
-        erantzuna = requests.post(uri, headers=cabeceras, data=data_encoded)
-        print("\tStatus: " + str(erantzuna.status_code))
-        if erantzuna.status_code == 200:
+        # Enviar petición
+        respuesta = requests.post(uri, headers=cabeceras, data=data_encoded)
+        print("\tStatus: " + str(respuesta.status_code))
+        # Comprobacion del status_code de la respuesta
+        if respuesta.status_code == 200:
+            resultado = json.loads(respuesta.content)
+            print("Archivo renombrado exitosamente:")
+            print(resultado)
             return True
         else:
-            print(erantzuna.text)
+            print("Error al renombrar el archivo:")
+            print(respuesta.text)
             return False
 
 
     def move_file(self, old_path, target_folder):
         print("/move_v2 (Mover)")
+        # Definición de los campos necesarios para la petición HTTP
         uri = 'https://api.dropboxapi.com/2/files/move_v2'
 
         # Extraemos el nombre del archivo del path original
         file_name = old_path.split('/')[-1]
 
-        # Construimos el nuevo path (asegurándonos de que no haya dobles slashes)
+        # Se construye el nuevo path
         target_folder = target_folder.strip('/')
         if target_folder == "":
             new_path = "/" + file_name
@@ -271,11 +288,22 @@ class Dropbox:
             "autorename": True
         }
 
-        response = requests.post(uri, headers=headers, data=json.dumps(data))
-        return response.status_code == 200
+        # Enviar petición
+        respuesta = requests.post(uri, headers=headers, data=json.dumps(data))
+        print("\tStatus: " + str(respuesta.status_code))
+        # Comprobacion del status_code de la respuesta
+        if respuesta.status_code == 200:
+            resultado = json.loads(respuesta.content)
+            print("Archivo movido exitosamente:")
+            print(resultado)
+        else:
+            print("Error al mover el archivo:")
+            print(respuesta.text)
+        return respuesta.status_code == 200
 
     def search(self, query, msg_listbox):
         print("/search")
+        # Definicion de los campos necesarios para la peticion HTTP   
         uri = 'https://api.dropboxapi.com/2/files/search_v2'
 
         headers = {'Host': 'api.dropboxapi.com',
@@ -289,27 +317,29 @@ class Dropbox:
             }
 
         data_encoded = json.dumps(data)
-        erantzuna = requests.post(uri, headers=headers, data=data_encoded)
+        # Enviar petición
+        respuesta = requests.post(uri, headers=headers, data=data_encoded)
 
-        if erantzuna.status_code == 200:
-            results = erantzuna.json()
+        # Comprobacion del status_code de la respuesta
+        if respuesta.status_code == 200:
+            resultados = respuesta.json()
 
-            # Procesamos los resultados para que tengan el formato que espera helper.update_listbox2
-            # La API de search devuelve una estructura distinta a list_folder
-            matches = results.get('matches', [])
+            # Como la API search devuelve una estructura distinta a list_folder, procesamos los resultados para adaptarlos al formato que espera helper.update_listbox2
+            matches = resultados.get('matches', [])
             processed_files = []
 
+            # Recorremos los resultados de búsqueda y extraemos la metadata de cada archivo encontrado
             for m in matches:
-                # Extraemos la metadata del archivo encontrado
                 metadata = m.get('metadata', {}).get('metadata', {})
                 processed_files.append(metadata)
 
-            # Creamos un diccionario falso para engañar al helper y que pinte los resultados
+            # Se crea un diccionario falso para engañar al helper y que pinte los resultados
             fake_json = {'entries': processed_files}
 
-            # Limpiamos la ruta actual para indicar que estamos en modo búsqueda
+            # Se limpia la ruta actual para indicar que estamos en modo búsqueda
             self._path = "Resultados de búsqueda"
             self._files = helper.update_listbox2(msg_listbox, self._path, fake_json)
+        # Si la respuesta no es 200, se muestra un mensaje de error con el contenido de la respuesta
         else:
-            print("Error en la búsqueda:", erantzuna.text)
+            print("Error en la búsqueda:", respuesta.text)
 

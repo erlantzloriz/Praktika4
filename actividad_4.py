@@ -121,32 +121,38 @@ def rename_file():
         index = selected_items2[0]
         file_info = dropbox._files[index]
 
+        # Comprobacion para evitar renombrar el directorio superior (..)
         if file_info['name'] == "..":
             messagebox.showwarning("Aviso", "No se puede renombrar el directorio superior (..)")
             return
 
+        # Se construye la ruta del archivo que se va a renombrar
         if dropbox._path == "":
             old_path = "/" + file_info['name']
         else:
             old_path = dropbox._path + "/" + file_info['name']
 
+        # Se verifica que el archivo tenga una ruta válida
         if not old_path:
             messagebox.showerror("Error", "El archivo no tiene ruta válida")
             return
 
         old_name = file_info['name']
 
-        # 4. Pedir el nuevo nombre
+        # Pedir el nuevo nombre al usuario
         new_name = simpledialog.askstring("Rename", f"Nuevo nombre para {old_name}:")
 
         if new_name:
-            # Llamar a la función de Dropbox.py que creaste antes
+            # Enviar petición de renombrado a Dropbox
             success = dropbox.rename_file(old_path, new_name)
+            # Si no ha ocurrido ningún error, vuelve a cargar los archivos
             if success:
                 dropbox.list_folder(msg_listbox2)
                 messagebox.showinfo("Éxito", "Nombre cambiado correctamente")
+            # Si no, muestra un mensaje de error
             else:
                 messagebox.showerror("Error", "No se pudo renombrar el archivo")
+    # Se muestra un mensaje de error si no se ha seleccionado ningún archivo            
     else:
         messagebox.showwarning("Selección vacía", "Por favor, selecciona un archivo de Dropbox")
 
@@ -156,19 +162,22 @@ def move_selected():
         index = selected_items2[0]
         file_info = dropbox._files[index]
 
-        # Evitar mover el botón de retroceso
+        # Comprobacion para evitar mover el directorio superior (..)
         if file_info['name'] == "..":
             messagebox.showwarning("Aviso", "No puedes mover el directorio superior")
             return
 
+        # Se construye la ruta del archivo que se va a mover
         if dropbox._path == "":
             old_path = "/" + file_info['name']
         else:
             old_path = dropbox._path + "/" + file_info['name']
-        # Pedir la carpeta de destino (ejemplo: /Fotos o Carpeta2)
+
+        # Se pide la ruta de destino del archivo
         target = simpledialog.askstring("Mover",
                                         f"Mover '{file_info['name']}' a:\n(Deja vacío para la raíz o escribe el nombre de la carpeta)")
-        if target is not None:  # Si no canceló el diálogo
+        # Si se ha añadido una ruta, se intenta mover el archivo y se muestra un mensaje de éxito o error según corresponda
+        if target is not None:
             if dropbox.move_file(old_path, target):
                 dropbox.list_folder(msg_listbox2)
                 messagebox.showinfo("Éxito", "Elemento movido correctamente")
@@ -178,18 +187,19 @@ def move_selected():
         messagebox.showwarning("Selección vacía", "Selecciona algo en Dropbox para mover")
 
 def execute_search():
+    # Se obtiene el texto del campo de búsqueda
     query = search_entry.get()
+    # Si se ha introducido algo, se realiza la búsqueda y se muestran los resultados en la lista de Dropbox. Si no, se muestra un mensaje de advertencia
     if query:
-        # Llamamos a un nuevo método en Dropbox.py que crearemos ahora
         dropbox.search(query, msg_listbox2)
     else:
         messagebox.showwarning("Atención", "Escribe algo para buscar")
 
 def clear_search():
+    # Se limpia el campo de búsqueda y se resetea la ruta actual a la raíz
     search_entry.delete(0, tk.END)
-    # Volvemos a listar la carpeta donde estábamos
     dropbox._path = ""
-
+    # Se vuelven a cargar los archivos del directorio actual
     dropbox.list_folder(msg_listbox2)
 
 ##########################################################################################################
@@ -209,7 +219,9 @@ def on_selecting2(event):
     selected_items2 = widget.curselection()
     print (selected_items2)
 
-def on_double_clicking2(event):
+def on_double_clicking2(event): # Al implementar funciones hemos tenido que modificar esta función para evitar errores al hacer doble click.
+    # Código original:
+
     # widget = event.widget
     # selection = widget.curselection()
     # if selection[0] == 0 and dropbox._path != "/":
@@ -229,27 +241,27 @@ def on_double_clicking2(event):
     selection = widget.curselection()
     if selection:
         index = selection[0]
-        # Obtenemos el archivo/carpeta de la lista que guarda Dropbox
+        # Se obtiene el item seleccionado
         item = dropbox._files[index]
 
+        # Si el archivo seleccionado es una carpeta
         if item['.tag'] == 'folder':
+            # Comprobar si se ha seleccionado el directorio superior (..)
             if item['name'] == '..':
-
+                # Si se ha seleccionado el directorio superior, se actualiza la ruta para subir un nivel
                 if dropbox._path in ["", "/"]:
                     dropbox._path = ""
-
+                # Si no, se actualiza la ruta para subir un nivel
                 else:
                     dropbox._path = os.path.dirname(dropbox._path)
-
                     if dropbox._path == "/":
                         dropbox._path = ""
 
-            # Avanzar
+            # Si se ha seleccionado una carpeta normal, se actualiza la ruta para entrar en esa carpeta
             else:
-
+                # Configurar el nuevo path dependiendo de si estamos en la raíz o no
                 if dropbox._path == "":
                     dropbox._path = "/" + item['name']
-
                 else:
                     dropbox._path = dropbox._path + "/" + item['name']
 
@@ -279,7 +291,7 @@ root.mainloop()
 
 if not egela._login:
     exit()
-# Si nos logeamos en eGela cogemos las referencias a los pdfs
+# Si nos logeamos en eGela se cogen las referencias a los pdfs
 pdfs = egela.get_pdf_refs()
 
 ##########################################################################################################
@@ -329,7 +341,6 @@ label2.grid(column=0, row=0, ipadx=5, ipady=5)
 top_frame = tk.Frame(newroot)
 top_frame.grid(row=0, column=2, sticky="ew", padx=5, pady=5)
 
-# El path ocupa más espacio
 top_frame.columnconfigure(0, weight=3)
 
 # Mostrar path actual
@@ -344,7 +355,7 @@ label = tk.Label(
 
 label.grid(row=0, column=0, sticky="w", padx=5)
 
-# ---------------- BUSCADOR ----------------
+# Se añade el buscador a la derecha del path (0,1) en la UI
 
 search_frame = tk.Frame(top_frame)
 search_frame.grid(row=0, column=1, sticky="e")
@@ -412,6 +423,7 @@ button2 = tk.Button(frame2, borderwidth=4,  background="#C6185C",fg="white", tex
 button2.pack(padx=2, pady=2)
 button3 = tk.Button(frame2, borderwidth=4, background="#7C86FF",fg="white", text="Create folder", width=10, pady=8, command=create_folder)
 button3.pack(padx=2, pady=2)
+# Añadidos los botones para renombrar y mover archivos
 button4 = tk.Button(frame2, borderwidth=4, background="#FFB37C", fg="white", text="Rename", width=10, pady=8, command=rename_file)
 button4.pack(padx=2, pady=2)
 button5 = tk.Button(frame2, borderwidth=4, background="#4CAF50", fg="white", text="Move", width=10, pady=8, command=move_selected)
